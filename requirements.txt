@@ -3,6 +3,7 @@ beautifulsoup4
 seleniumbase
 selenium
 pandas
-chromium
-chromium-driver
+chromium-browser
+chromium-chromedriver
 google-genai
+
