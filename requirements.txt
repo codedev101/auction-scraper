@@ -1,6 +1,8 @@
+streamlit
+seleniumbase
+webdriver-manager
 requests
 beautifulsoup4
+selenium
 pandas
 google-genai
-requests-html
-lxml
