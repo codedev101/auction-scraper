@@ -1,9 +1,6 @@
 requests
 beautifulsoup4
-seleniumbase
-selenium
 pandas
-chromium-browser
-chromium-chromedriver
 google-genai
-
+requests-html
+lxml
