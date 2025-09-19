@@ -82,15 +82,105 @@ st.markdown("""
     footer {visibility: hidden;}
     .stDeployButton {display: none;}
     
-    /* Sidebar styling */
+    /* Sidebar styling - Force dark theme regardless of system preferences */
     .css-1d391kg {
-        background-color: #1a1a1a;
-        border-right: 1px solid #333333;
+        background-color: #1a1a1a !important;
+        border-right: 1px solid #333333 !important;
     }
     
     .sidebar .sidebar-content {
-        background-color: #1a1a1a;
+        background-color: #1a1a1a !important;
     }
+    
+    /* Force sidebar to stay visible and dark */
+    .css-1d391kg {
+        display: block !important;
+        visibility: visible !important;
+        width: 21rem !important;
+        min-width: 21rem !important;
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Prevent sidebar collapse and force dark background */
+    section[data-testid="stSidebar"] {
+        display: block !important;
+        visibility: visible !important;
+        width: 21rem !important;
+        min-width: 21rem !important;
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Force all sidebar elements to dark theme */
+    section[data-testid="stSidebar"] > div {
+        background-color: #1a1a1a !important;
+    }
+    
+    section[data-testid="stSidebar"] .css-1v0mbdj {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Override any light theme styling */
+    .css-1d391kg, 
+    .css-1d391kg > div,
+    .css-1d391kg .css-1v0mbdj,
+    section[data-testid="stSidebar"],
+    section[data-testid="stSidebar"] > div,
+    section[data-testid="stSidebar"] .element-container {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+    }
+    
+    /* Hide sidebar collapse button */
+    button[kind="header"][data-testid="baseButton-header"] {
+        display: none !important;
+    }
+    
+    /* Ensure sidebar content is always visible */
+    .css-1d391kg .css-1v0mbdj {
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* Additional CSS to keep sidebar open */
+    @media (max-width: 768px) {
+        section[data-testid="stSidebar"] {
+            display: block !important;
+            width: 21rem !important;
+        }
+    }
+</style>
+
+<script>
+// JavaScript to keep sidebar expanded
+document.addEventListener('DOMContentLoaded', function() {
+    // Function to keep sidebar expanded
+    function keepSidebarExpanded() {
+        const sidebar = document.querySelector('[data-testid="stSidebar"]');
+        const collapseButton = document.querySelector('button[kind="header"][data-testid="baseButton-header"]');
+        
+        if (sidebar) {
+            sidebar.style.display = 'block';
+            sidebar.style.visibility = 'visible';
+            sidebar.style.width = '21rem';
+            sidebar.style.minWidth = '21rem';
+        }
+        
+        if (collapseButton) {
+            collapseButton.style.display = 'none';
+        }
+    }
+    
+    // Run immediately and on any changes
+    keepSidebarExpanded();
+    
+    // Watch for changes and maintain sidebar
+    const observer = new MutationObserver(keepSidebarExpanded);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Also run on window resize
+    window.addEventListener('resize', keepSidebarExpanded);
+});
+</script>
     
     /* Sidebar title styling */
     .sidebar-title {
