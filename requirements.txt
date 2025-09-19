@@ -12,4 +12,5 @@ google-generativeai
 openpyxl
 lxml
 html5lib
+cryptography
 
