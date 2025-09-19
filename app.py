@@ -129,7 +129,15 @@ st.markdown("""
     }
     
     .main .block-container { padding: 1.5rem 3rem; }
-    #MainMenu, header, footer, .stDeployButton { visibility: hidden; }
+    
+    /* FIXED: Only hide specific menu items, not the sidebar toggle button */
+    #MainMenu { visibility: hidden; }
+    header[data-testid="stHeader"] { visibility: hidden; }
+    footer { visibility: hidden; }
+    .stDeployButton { visibility: hidden; }
+    
+    /* FIXED: Ensure sidebar toggle button is visible */
+    button[kind="header"] { visibility: visible !important; }
     
     section[data-testid="stSidebar"] {
         background-color: var(--sidebar-bg) !important;
@@ -142,7 +150,7 @@ st.markdown("""
         border: 1px solid var(--sidebar-border);
     }
     .section-header {
-        font-size: 0.75rem; font-weight: 600; color: var(--text-color-dark-secondary);
+        font-size: 0.75rem; font-weight: 600; color: #CCCCCC !important; /* FIXED: Made text lighter for visibility */
         text-transform: uppercase; letter-spacing: 0.1em; margin: 1.5rem 0 0.5rem 0;
         padding-left: 0.5rem;
     }
@@ -171,14 +179,42 @@ st.markdown("""
         line-height: 1.6;
     }
 
+    /* FIXED: Input styling with proper placeholder colors */
     .stTextInput > div > div > input,
-    .stNumberInput > div > div > input,
+    .stNumberInput > div > div > input {
+        border-radius: 10px !important; 
+        border: 2px solid #E0E0E0 !important; /* FIXED: Better border visibility */
+        padding: 0.75rem 1rem !important; 
+        font-family: var(--font-family) !important;
+        background: #FFFFFF !important; /* FIXED: White background for login inputs */
+        color: #212529 !important; /* FIXED: Dark text for better readability */
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    /* FIXED: White placeholder text for password input */
+    .stTextInput > div > div > input::placeholder {
+        color: #888888 !important; /* FIXED: Visible placeholder color */
+        opacity: 1 !important;
+    }
+    
+    /* FIXED: Focus states for inputs */
+    .stTextInput > div > div > input:focus,
+    .stNumberInput > div > div > input:focus {
+        border-color: var(--primary-action-color) !important;
+        box-shadow: 0 0 0 3px rgba(254, 74, 73, 0.1) !important;
+        outline: none !important;
+    }
+
     .stButton > button,
     div[data-testid="stFormSubmitButton"] > button {
-        border-radius: 10px !important; border: 1px solid var(--bg-color-dark-interactive) !important;
-        padding: 0.75rem 1rem !important; font-family: var(--font-family) !important;
+        border-radius: 10px !important; 
+        border: 1px solid var(--bg-color-dark-interactive) !important;
+        padding: 0.75rem 1rem !important; 
+        font-family: var(--font-family) !important;
         background: var(--bg-color-dark-interactive) !important;
-        color: var(--text-color-light) !important; font-weight: 500 !important;
+        color: var(--text-color-light) !important; 
+        font-weight: 500 !important;
         transition: all 0.2s ease !important;
     }
     .stButton > button:hover,
@@ -189,8 +225,12 @@ st.markdown("""
         background: var(--primary-action-color) !important;
         border-color: var(--primary-action-color) !important;
     }
+    
+    /* FIXED: Label colors for better visibility */
     .stTextInput > label, .stNumberInput > label {
-        color: var(--text-color-dark) !important; font-weight: 600;
+        color: var(--text-color-dark) !important; 
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
     }
     
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
@@ -210,11 +250,15 @@ st.markdown("""
         border-color: var(--bg-color-dark-interactive) !important;
     }
 
+    /* FIXED: Alert styling with better text contrast */
     div[data-testid="stAlert"] {
         border-radius: 12px; border-width: 1px; border-style: solid;
         box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     }
-    div[data-testid="stAlert"] p { color: #333 !important; }
+    div[data-testid="stAlert"] p { 
+        color: #333 !important; 
+        font-weight: 500 !important; /* FIXED: Better text weight */
+    }
     div[data-testid="stAlert"][kind="info"] {
         background-color: var(--info-bg); border-color: var(--info-border);
     }
@@ -226,8 +270,12 @@ st.markdown("""
         text-align: center; background: #fff; padding: 2rem; border-radius: 16px;
         border: 1px solid var(--border-color-light); margin-bottom: 2rem;
     }
-    .main-header-card h1 { font-size: 2.25rem; font-weight: 800; color: #212529; }
-    .main-header-card p { font-size: 1.1rem; color: #6C757D; margin-bottom: 1.5rem; }
+    .main-header-card h1 { 
+        font-size: 2.25rem; font-weight: 800; color: #212529; 
+    }
+    .main-header-card p { 
+        font-size: 1.1rem; color: #6C757D; margin-bottom: 1.5rem; 
+    }
     .enterprise-badge {
         display: inline-block; background-color: #28a745; color: white;
         padding: 0.4rem 0.9rem; font-size: 0.8rem; font-weight: 700;
@@ -238,12 +286,31 @@ st.markdown("""
         border-radius: 16px; padding: 2rem; height: 100%;
         transition: all 0.2s ease-in-out;
     }
-    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
-    .feature-card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-color-dark); }
-    .feature-card-content { font-size: 0.95rem; color: var(--text-color-dark-secondary); line-height: 1.6; }
+    .feature-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08); 
+    }
+    .feature-card-title { 
+        font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; 
+        color: var(--text-color-dark); 
+    }
+    .feature-card-content { 
+        font-size: 0.95rem; color: var(--text-color-dark-secondary); 
+        line-height: 1.6; 
+    }
     .border-blue { border-top: 4px solid #4A90E2; }
     .border-purple { border-top: 4px solid #9013FE; }
     .border-orange { border-top: 4px solid #F5A623; }
+    
+    /* FIXED: Ensure all text in main content area is readable */
+    .main p, .main span, .main div {
+        color: var(--text-color-dark) !important;
+    }
+    
+    /* FIXED: Dataframe text visibility */
+    .stDataFrame {
+        color: var(--text-color-dark) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
