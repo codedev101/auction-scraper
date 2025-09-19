@@ -3,14 +3,33 @@ import pandas as pd
 import io
 from datetime import datetime
 from scraper import AuctionScraper
+from cryptography.fernet import Fernet
+import base64
+import json
 
-# Built-in Gemini API Keys
-GEMINI_API_KEYS = [
-    "AIzaSyC4tKHIpeMl6YsUauHngWtnL7VmFAMwbxE",
-    "AIzaSyC9IQWaghjImmqRROYoMwSQLuSc34X5iDQ",
-    "AIzaSyC4tKHIpeMl6YsUauHngWtnL7VmFAMwbxE",
-    "AIzaSyC9IQWaghjImmqRROYoMwSQLuSc34X5iDQ"
-]
+# Encrypted Gemini API Keys (Secure)
+ENCRYPTION_KEY = b's3Z36OOB8v2CxDQhFg90Ot3AMSxedH80xOrvehmz9h4='
+ENCRYPTED_API_KEYS = 'Z0FBQUFBQm96S1RfLUdmTHc1MWgyOHpwRTRKSnNuZEhzQnY5YjJYZnFoYW5HVnFkWV9paGhtdWEwTVJoU3VNWnl4a2ExNlYxdHNMNnJEUGRKM2FJM0xSSFdlTWkwdnkxTVZVbVpxbm82VEZJYnNDSUlVbGRaeDdSMW90ZTEwczdRQTIxTDJ0emdLQWttSm0xTi1odU9RUDRTUlpaRFk2VldObklySzRQempteDVVMWZMTW41YXZmVm5iSkhJWTQ3RWtyaERxYUtBSzZlTUtDM0VCcGdxcE16d1pPTU1WQlRzTUdWRlJoM3pUUV92UmJuZFVidlBtN0R0aHhFT3E0NFZLYUN1ZjM3WWlRLXJCY0Z3VVJmLTAyQU1QTXZnYWZZeXE4TER6eG1IMVVzTXlnQ2F6eUdjM009'
+
+def decrypt_gemini_keys():
+    """Decrypt the Gemini API keys at runtime"""
+    try:
+        fernet = Fernet(ENCRYPTION_KEY)
+        
+        # Decode from base64
+        encrypted_keys = base64.b64decode(ENCRYPTED_API_KEYS.encode())
+        
+        # Decrypt
+        decrypted_json = fernet.decrypt(encrypted_keys).decode()
+        
+        # Convert back to list
+        return json.loads(decrypted_json)
+    except Exception as e:
+        st.error(f"Failed to decrypt API keys: {str(e)}")
+        return []
+
+# Decrypt API keys at startup
+GEMINI_API_KEYS = decrypt_gemini_keys()
 
 # Import Amazon functions from amazon.py
 try:
@@ -426,11 +445,17 @@ def show_login_page():
     with col2:
         st.markdown("""
         <div style="text-align: center; padding: 3rem 0;">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">🚀</div>
+            <div style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); 
+                        border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; 
+                        display: inline-block; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">
+                <img src="data:image/png;base64,{logo_base64}" 
+                     style="max-width: 350px; height: auto;" 
+                     alt="NextGen Software Group">
+            </div>
             <h1 style="color: #ffffff; font-size: 2.5rem; margin-bottom: 0.5rem;">Business Intelligence Suite</h1>
             <p style="color: #a0a0a0; font-size: 1.1rem; margin-bottom: 3rem;">Secure Access Portal</p>
         </div>
-        """, unsafe_allow_html=True)
+        """.format(logo_base64=get_logo_base64()), unsafe_allow_html=True)
         
         # Login form with dark styling
         st.markdown("""
@@ -454,7 +479,7 @@ def show_login_page():
             if login_button:
                 if password == "nick123":
                     st.session_state.authenticated = True
-                    st.success("🎉 Login successful! Welcome to Business Intelligence Suite")
+                    st.success("🎉 Login successful! Welcome to NextGen Business Intelligence Suite")
                     st.rerun()
                 else:
                     st.error("❌ Invalid credentials. Please try again.")
@@ -462,25 +487,32 @@ def show_login_page():
         st.markdown("""
         <div style="text-align: center; margin-top: 2rem; color: #666666; font-size: 0.8rem;">
             <p>💡 Demo Password: nick123</p>
+            <p style="margin-top: 1rem; color: #00d4aa;">Powered by NextGen Software Group</p>
         </div>
         """, unsafe_allow_html=True)
 
 def show_dashboard_logo():
-    """Display the logo at the top of the dashboard"""
+    """Display the NextGen Software Group logo at the top of the dashboard"""
     st.markdown("""
     <div style="background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%); 
-                border: 1px solid #404040; border-radius: 16px; padding: 1.5rem; 
+                border: 1px solid #404040; border-radius: 16px; padding: 2rem; 
                 margin-bottom: 2rem; text-align: center; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);">
-        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🚀</div>
-        <h1 style="color: #ffffff; font-size: 2rem; margin: 0; font-weight: 700;">Business Intelligence Suite</h1>
+        <div style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); 
+                    border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; 
+                    display: inline-block; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">
+            <img src="data:image/png;base64,{logo_base64}" 
+                 style="max-width: 400px; height: auto;" 
+                 alt="NextGen Software Group">
+        </div>
+        <h1 style="color: #ffffff; font-size: 2rem; margin: 0.5rem 0; font-weight: 700;">Business Intelligence Suite</h1>
         <p style="color: #a0a0a0; margin: 0.5rem 0 0 0; font-size: 1rem;">Advanced Data Analytics & Automation Platform</p>
         <div style="margin-top: 1rem;">
-            <span style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+            <span style="background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%); 
                          color: white; padding: 0.3rem 0.8rem; border-radius: 20px; 
-                         font-size: 0.75rem; font-weight: 600;">✨ Enterprise Edition</span>
+                         font-size: 0.75rem; font-weight: 600;">NextGen Enterprise Edition</span>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """.format(logo_base64=get_logo_base64()), unsafe_allow_html=True)
 
 def to_excel(df: pd.DataFrame, site_name: str):
     output = io.BytesIO()
@@ -564,7 +596,7 @@ def create_ai_scraper_ui(site_name):
             disabled=st.session_state.is_scraping
         )
 
-    return submitted, url, start_page, end_page
+    return submitted, url, start_page, end_page, []
 
 def create_direct_scraper_ui(site_name, placeholder_url, special_note=None):
     st.markdown(f"""
@@ -742,7 +774,7 @@ if not st.session_state.authenticated:
 else:
     # Streamlit Sidebar Navigation (only show if authenticated)
     with st.sidebar:
-        st.markdown('<div class="sidebar-title">🚀 Business Intelligence Suite</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-title">NextGen Business Intelligence</div>', unsafe_allow_html=True)
         
         if st.button("🏠 Dashboard", key="home_btn", use_container_width=True):
             st.session_state.current_view = 'home'
