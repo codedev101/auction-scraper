@@ -6,3 +6,10 @@ beautifulsoup4
 selenium
 pandas
 google-genai
+supabase
+curl-cffi
+google-generativeai
+openpyxl
+lxml
+html5lib
+
