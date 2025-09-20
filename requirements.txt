@@ -1,4 +1,5 @@
 streamlit
-pydoll
+pydoll-python
 beautifulsoup4
 pandas
+
