@@ -6,4 +6,4 @@ requests
 google-generativeai
 asyncio
 google-genai
-
+setuptools
