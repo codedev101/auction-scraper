@@ -1,4 +1,5 @@
 undetected-chromedriver
+selenium
 streamlit
 beautifulsoup4
 pandas
@@ -7,3 +8,4 @@ google-generativeai
 asyncio
 google-genai
 setuptools
+
