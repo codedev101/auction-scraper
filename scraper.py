@@ -10,7 +10,7 @@ import traceback
 import io
 import pandas as pd
 from webdriver_manager.chrome import ChromeDriverManager
-
+import tempfile
 # Google Gemini API imports
 from google import genai
 from google.genai import types
@@ -1303,6 +1303,7 @@ class AuctionScraper:
             except Exception as e:
                 self.ui['status'].error(f"Error on page {page}: {str(e)}")
                 break
+
 
 
 
