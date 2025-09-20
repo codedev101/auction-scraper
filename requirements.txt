@@ -7,12 +7,12 @@ selenium
 pandas
 google-genai
 supabase
-cffi==1.15.1
 google-generativeai
 openpyxl
 lxml
 html5lib
 cryptography
+
 
 
 
