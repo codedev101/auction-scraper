@@ -11,8 +11,8 @@ openpyxl
 lxml
 html5lib
 cryptography
-
-
+seleniumbase
+curl-cffi
 
 
 
