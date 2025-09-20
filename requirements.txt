@@ -3,9 +3,11 @@ selenium
 streamlit
 beautifulsoup4
 pandas
+webdriver-manager
 requests
 google-generativeai
 asyncio
 google-genai
 setuptools
+
 
