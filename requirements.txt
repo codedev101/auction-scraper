@@ -2,7 +2,6 @@ streamlit
 webdriver-manager
 requests
 beautifulsoup4
-selenium
 pandas
 google-genai
 supabase
@@ -13,6 +12,7 @@ html5lib
 cryptography
 seleniumbase
 curl-cffi
+
 
 
 
