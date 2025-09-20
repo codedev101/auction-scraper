@@ -1,313 +1,476 @@
-import json
-import os
-import shutil
-import subprocess
-import time
-from typing import List, Tuple
-
-import countryflag
-import pandas as pd
-import requests
 import streamlit as st
-from lxml import etree, html
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
+import pandas as pd
+import io
+from datetime import datetime
+from scraper import AuctionScraper
 
+# --- Page Configuration ---
+st.set_page_config(
+    page_title="Ultimate Auction Scraper Pro - 11 Sites",
+    page_icon="🤖",
+    layout="wide"
+)
 
-@st.cache_data(show_spinner=False, ttl=180)
-def get_proxyscrape_socks4(country: str = 'all', protocol: str = 'socks4') -> tuple:
-    PROXYSCRAPE_URL = 'https://api.proxyscrape.com/v3/free-proxy-list/get'
-    params = {
-        'request': 'displayproxies',
-        'proxy_format' : 'protocolipport',
-        'format': 'json',
-        'protocol': protocol,
-        'timeout': 2000,
-        'anonymity': 'all',
-        'country': country,
+# --- Custom CSS for Eye-Catching Design ---
+st.markdown("""
+<style>
+    .main-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
     }
-    try:
-        response = requests.get(url=PROXYSCRAPE_URL, params=params, timeout=3)
-        response.raise_for_status()
-        response = response.json()
-        response = pd.json_normalize(response.get('proxies')).astype(str)
-    except Exception as e:
-        return False, str(e)
-    else:
-        return True, response
-
-
-@st.cache_data(show_spinner=False, ttl=180)
-def get_mtproto_socks5() -> tuple:
-    url = "https://mtpro.xyz/api/"
-    params = {
-        'type': 'socks'
+    
+    .main-title {
+        color: white;
+        font-size: 3rem;
+        font-weight: bold;
+        margin: 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
-    try:
-        response = requests.get(url, params=params)
-        response = response.json()
-        response = pd.DataFrame(response).astype(str)
-    except Exception as e:
-        return False, str(e)
-    else:
-        return True, response
+    
+    .main-subtitle {
+        color: #e8f4fd;
+        font-size: 1.2rem;
+        margin: 0.5rem 0 0 0;
+    }
+    
+    .ai-badge {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        display: inline-block;
+        margin: 0.2rem;
+    }
+    
+    .no-ai-badge {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        display: inline-block;
+        margin: 0.2rem;
+    }
+    
+    .site-info {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 0.5rem 0;
+    }
+    
+    .stTab [data-baseweb="tab-list"] {
+        gap: 2px;
+        flex-wrap: wrap;
+    }
+    
+    .stTab [data-baseweb="tab"] {
+        height: 60px;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        color: white;
+        font-weight: bold;
+        border: none;
+        font-size: 0.85rem;
+    }
+    
+    .stTab [aria-selected="true"] {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    div[data-testid="metric-container"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 1rem;
+        border-radius: 15px;
+        color: white;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    div[data-testid="metric-container"] > div {
+        color: white;
+    }
+    
+    div[data-testid="metric-container"] [data-testid="metric-value"] {
+        color: white;
+        font-size: 2rem;
+    }
+    
+    .stProgress > div > div > div > div {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .status-info {
+        background: linear-gradient(135deg, #4cc9f0 0%, #00f2fe 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        color: white;
+        text-align: center;
+        margin: 1rem 0;
+        font-weight: bold;
+    }
+    
+    .fix-notice {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        color: white;
+        text-align: center;
+        margin: 1rem 0;
+        font-weight: bold;
+    }
+    
+    .results-container {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+</style>
+""", unsafe_allow_html=True)
 
+# --- Session State Management ---
+if 'is_scraping' not in st.session_state:
+    st.session_state.is_scraping = False
+if 'results_df' not in st.session_state:
+    st.session_state.results_df = pd.DataFrame()
+if 'scraper_instance' not in st.session_state:
+    st.session_state.scraper_instance = None
 
-@st.cache_resource(show_spinner=False)
-def get_flag(country: str):
-    return countryflag.getflag([country])
+# --- Helper Functions ---
+def to_excel(df: pd.DataFrame, site_name: str):
+    """Converts a DataFrame to an Excel file in memory with enhanced formatting."""
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Auction Data')
+        
+        # Add summary sheet if we have recovery data
+        if not df.empty and 'Recovery' in df.columns:
+            import statistics
+            summary_data = []
+            percentages = []
+            for recovery in df['Recovery']:
+                try:
+                    percentage = float(str(recovery).replace('%', ''))
+                    percentages.append(percentage)
+                except (ValueError, TypeError):
+                    continue
+            
+            if percentages:
+                summary_data.append(['Total Items', len(df)])
+                summary_data.append(['Average Recovery', f"{statistics.mean(percentages):.2f}%"])
+                summary_data.append(['Highest Recovery', f"{max(percentages):.2f}%"])
+                summary_data.append(['Lowest Recovery', f"{min(percentages):.2f}%"])
+                summary_data.append(['Export Date', datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+                summary_data.append(['Site', site_name])
+                
+                summary_df = pd.DataFrame(summary_data, columns=['Metric', 'Value'])
+                summary_df.to_excel(writer, index=False, sheet_name='Summary')
+    
+    processed_data = output.getvalue()
+    return processed_data
 
+def stop_scraping():
+    """Stops the scraping process and cleans up."""
+    if st.session_state.scraper_instance:
+        st.session_state.scraper_instance.stop()
+    st.session_state.is_scraping = False
+    st.session_state.scraper_instance = None
 
-@st.cache_resource(show_spinner=False)
-def get_python_version() -> str:
-    try:
-        result = subprocess.run(['python', '--version'], capture_output=True, text=True)
-        version = result.stdout.split()[1]
-        return version
-    except Exception as e:
-        return str(e)
+def display_results(site_name):
+    """Displays the results dataframe and download button."""
+    if not st.session_state.results_df.empty:
+        st.markdown("---")
+        st.subheader(f"📊 {site_name} Scraping Results")
+        st.dataframe(st.session_state.results_df, use_container_width=True)
+        
+        excel_data = to_excel(st.session_state.results_df, site_name)
+        st.download_button(
+            label=f"💾 Download {site_name} Results as Excel",
+            data=excel_data,
+            file_name=f"{site_name.replace('.', '')}_auction_data_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
 
+# --- UI Layout ---
 
-@st.cache_resource(show_spinner=False)
-def get_chromium_version() -> str:
-    try:
-        result = subprocess.run(['chromium', '--version'], capture_output=True, text=True)
-        version = result.stdout.split()[1]
-        return version
-    except Exception as e:
-        return str(e)
+# Header
+st.markdown("""
+<div class="main-header">
+    <h1 class="main-title">ULTIMATE AUCTION SCRAPER PRO</h1>
+    <p class="main-subtitle">Complete Edition - 11 Auction Sites with AI and Direct Price Scraping</p>
+</div>
+""", unsafe_allow_html=True)
 
+# Sidebar for API keys and instructions
+with st.sidebar:
+    st.header("⚙️ Configuration")
+    
+    st.markdown("""
+    <div class="site-info">
+        <h4>🤖 AI-Powered Sites (3)</h4>
+        <span class="ai-badge">HiBid</span>
+        <span class="ai-badge">BiddingKings</span>
+        <span class="ai-badge">BidLlama</span>
+        <p style="margin-top: 10px; font-size: 0.9rem;">These sites use AI to find retail prices from product images.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="site-info">
+        <h4>📊 Direct Price Sites (8)</h4>
+        <span class="no-ai-badge">Nellis</span>
+        <span class="no-ai-badge">BidFTA</span>
+        <span class="no-ai-badge">MAC.bid</span>
+        <span class="no-ai-badge">A-Stock</span>
+        <span class="no-ai-badge">702Auctions</span>
+        <span class="no-ai-badge">Vista</span>
+        <span class="no-ai-badge">BidSoflo</span>
+        <span class="no-ai-badge">BidAuctionDepot</span>
+        <p style="margin-top: 10px; font-size: 0.9rem;">These sites already provide retail prices, no AI needed.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.info("AI features require at least one Google Gemini API key for HiBid, BiddingKings, and BidLlama.")
+    
+    keys = []
+    for i in range(4):
+        key = st.text_input(f"Gemini API Key {i+1}", type="password", key=f"api_key_{i}")
+        if key:
+            keys.append(key)
+    
+    st.session_state.api_keys = keys
+    
+    st.markdown("---")
+    st.header("📖 How to Use")
+    st.markdown("""
+    **For AI Sites (HiBid, BiddingKings, BidLlama):**
+    1. Enter your Gemini API keys above
+    2. Select the AI-powered tab
+    3. Enter the auction catalog URL
+    4. Set page range and start scraping
+    
+    **For Direct Price Sites (All Others):**
+    1. No API keys needed
+    2. Select the appropriate tab
+    3. Enter the auction URL
+    4. Start scraping immediately
+    
+    **Export:** Download results as Excel with summary statistics.
+    """)
 
-@st.cache_resource(show_spinner=False)
-def get_chromedriver_version() -> str:
-    try:
-        result = subprocess.run(['chromedriver', '--version'], capture_output=True, text=True)
-        version = result.stdout.split()[1]
-        return version
-    except Exception as e:
-        return str(e)
+# Main content area with tabs for all 11 sites
+hibid_tab, biddingkings_tab, bidllama_tab, nellis_tab, bidfta_tab, macbid_tab, astock_tab, auctions702_tab, vista_tab, bidsoflo_tab, bidauctiondepot_tab = st.tabs([
+    "🤖 HiBid", "🤖 BiddingKings", "🤖 BidLlama", 
+    "📊 Nellis", "📊 BidFTA", "📊 MAC.bid",
+    "🏠 A-Stock", "🏬 702Auctions", "🔍 Vista", "💎 BidSoflo", "🛒 BidAuctionDepot"
+])
 
+def create_ai_scraper_ui(site_name):
+    """Creates UI for AI-powered scrapers (HiBid, BiddingKings, BidLlama)."""
+    st.markdown(f"""
+    <div class="status-info">
+        🤖 {site_name} AI-Powered Auction Scraper
+        <br><small>Uses Google Gemini AI to find retail prices from product images</small>
+    </div>
+    """, unsafe_allow_html=True)
 
-@st.cache_resource(show_spinner=False)
-def get_logpath() -> str:
-    return os.path.join(os.getcwd(), 'selenium.log')
+    # Input Form
+    with st.form(key=f'{site_name}_form'):
+        url = st.text_input(
+            "Auction URL", 
+            placeholder=f"Enter the {site_name} auction catalog URL here", 
+            key=f'url_{site_name}',
+            help=f"Paste the full {site_name} auction catalog URL"
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            start_page = st.number_input("Start Page", min_value=1, value=1, step=1, key=f'start_{site_name}')
+        with col2:
+            end_page = st.number_input("End Page (0 for no limit)", min_value=0, value=0, step=1, key=f'end_{site_name}')
+        
+        submitted = st.form_submit_button(
+            f"🚀 Start {site_name} Scraping", 
+            type="primary", 
+            use_container_width=True, 
+            disabled=st.session_state.is_scraping
+        )
 
+    return submitted, url, start_page, end_page
 
-@st.cache_resource(show_spinner=False)
-def get_chromedriver_path() -> str:
-    return shutil.which('chromedriver')
+def create_direct_scraper_ui(site_name, placeholder_url, special_note=None):
+    """Creates UI for direct price scrapers."""
+    st.markdown(f"""
+    <div class="status-info">
+        📊 {site_name} Direct Price Scraper
+        <br><small>No AI needed - uses existing retail price data from the site</small>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if special_note:
+        st.markdown(f"""
+        <div class="fix-notice">
+            ✅ {special_note}
+        </div>
+        """, unsafe_allow_html=True)
 
+    with st.form(key=f'{site_name}_form'):
+        url = st.text_input(
+            "Auction URL", 
+            placeholder=placeholder_url, 
+            key=f'url_{site_name}',
+            help=f"Paste the full {site_name} auction URL"
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            start_page = st.number_input("Start Page", min_value=1, value=1, step=1, key=f'start_{site_name}')
+        with col2:
+            end_page = st.number_input("End Page (0 for no limit)", min_value=0, value=0, step=1, key=f'end_{site_name}')
+        
+        submitted = st.form_submit_button(
+            f"🚀 Start {site_name} Scraping", 
+            type="primary", 
+            use_container_width=True, 
+            disabled=st.session_state.is_scraping
+        )
 
-@st.cache_resource(show_spinner=False)
-def get_webdriver_options(proxy: str = None, socksStr: str = None) -> Options:
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-features=NetworkService")
-    options.add_argument("--window-size=1920x1080")
-    options.add_argument("--disable-features=VizDisplayCompositor")
-    options.add_argument('--ignore-certificate-errors')
-    if proxy is not None and socksStr is not None:
-        options.add_argument(f"--proxy-server={socksStr}://{proxy}")
-    options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
-    return options
+    return submitted, url, start_page, end_page
 
+def run_scraper(site_name, url, start_page, end_page, requires_ai=True):
+    """Common function to run any scraper."""
+    if not url:
+        st.error("Please enter a valid URL.")
+        return
+    
+    if requires_ai and not st.session_state.api_keys:
+        st.error("Please enter at least one Gemini API Key in the sidebar for AI-powered scraping.")
+        return
+    
+    st.session_state.is_scraping = True
+    st.session_state.results_df = pd.DataFrame()
 
-def get_messages_from_log(logs) -> List:
-    messages = list()
-    for entry in logs:
-        logmsg = json.loads(entry["message"])["message"]
-        if logmsg["method"] == "Network.responseReceived": # Filter out HTTP responses
-            # check for 200 and 204 status codes
-            if logmsg["params"]["response"]["status"] not in [200, 204]:
-                messages.append(logmsg)
-        elif logmsg["method"] == "Network.responseReceivedExtraInfo":
-            if logmsg["params"]["statusCode"] not in [200, 204]:
-                messages.append(logmsg)
-    if len(messages) == 0:
-        return None
-    return messages
-
-
-def prettify_html(html_content) -> str:
-    return etree.tostring(html.fromstring(html_content), pretty_print=True).decode('utf-8')
-
-
-def get_webdriver_service(logpath) -> Service:
-    service = Service(
-        executable_path=get_chromedriver_path(),
-        log_output=logpath,
+    status_placeholder = st.empty()
+    progress_placeholder = st.empty()
+    
+    metric_cols = st.columns(3)
+    pages_metric = metric_cols[0].empty()
+    lots_metric = metric_cols[1].empty()
+    recovery_metric = metric_cols[2].empty()
+    
+    dataframe_placeholder = st.empty()
+    
+    pages_metric.metric("Pages Scraped", 0)
+    lots_metric.metric("Lots Scraped", 0)
+    recovery_metric.metric("Average Recovery", "0%")
+    progress_placeholder.progress(0)
+    
+    ui_placeholders = {
+        'status': status_placeholder,
+        'progress': progress_placeholder,
+        'dataframe': dataframe_placeholder,
+        'metrics': {
+            'pages': pages_metric,
+            'lots': lots_metric,
+            'recovery': recovery_metric
+        }
+    }
+    
+    api_keys = st.session_state.api_keys if requires_ai else []
+    st.session_state.scraper_instance = AuctionScraper(
+        gemini_api_keys=api_keys,
+        ui_placeholders=ui_placeholders
     )
-    return service
+    
+    try:
+        results = st.session_state.scraper_instance.run(site_name, url, start_page, end_page)
+        
+        if results:
+            st.session_state.results_df = pd.DataFrame(results)
+            status_placeholder.success(f"Scraping complete! Found {len(results)} items.")
+        else:
+            status_placeholder.warning("Scraping finished, but no items were found.")
+            
+    except Exception as e:
+        status_placeholder.error(f"An error occurred during scraping: {str(e)}")
+    
+    st.session_state.is_scraping = False
+    st.rerun()
 
+# --- Tab Implementations ---
 
-def delete_selenium_log(logpath: str):
-    if os.path.exists(logpath):
-        os.remove(logpath)
+with hibid_tab:
+    submitted, url, start_page, end_page = create_ai_scraper_ui("HiBid")
+    if submitted: run_scraper("HiBid", url, start_page, end_page, requires_ai=True)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_hibid")
+    display_results("HiBid")
 
+with biddingkings_tab:
+    submitted, url, start_page, end_page = create_ai_scraper_ui("BiddingKings")
+    if submitted: run_scraper("BiddingKings", url, start_page, end_page, requires_ai=True)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_bk")
+    display_results("BiddingKings")
 
-def show_selenium_log(logpath: str):
-    if os.path.exists(logpath):
-        with open(logpath) as f:
-            content = f.read()
-            st.code(body=content, language='log', line_numbers=True)
-    else:
-        st.error('No log file found!', icon='🔥')
+with bidllama_tab:
+    submitted, url, start_page, end_page = create_ai_scraper_ui("BidLlama")
+    if submitted: run_scraper("BidLlama", url, start_page, end_page, requires_ai=True)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_bl")
+    display_results("BidLlama")
 
+with nellis_tab:
+    submitted, url, start_page, end_page = create_direct_scraper_ui("Nellis", "https://www.nellisauction.com/browse/co/denver/7822/all")
+    if submitted: run_scraper("Nellis", url, start_page, end_page, requires_ai=False)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_nellis")
+    display_results("Nellis")
 
-def run_selenium(logpath: str, proxy: str, socksStr: str) -> Tuple[str, List, List, str]:
-    name = None
-    html_content = None
-    options = get_webdriver_options(proxy=proxy, socksStr=socksStr)
-    service = get_webdriver_service(logpath=logpath)
-    with webdriver.Chrome(options=options, service=service) as driver:
-        url = "https://www.unibet.fr/sport/hub/euro-2024"
-        try:
-            driver.get(url)
-            time.sleep(2)
-            # Wait for the element to be rendered:
-            element = WebDriverWait(driver=driver, timeout=10).until(lambda x: x.find_elements(by=By.CSS_SELECTOR, value="h2.eventcard-content-name"))
-            name = element[0].get_property('attributes')[0]['name']
-            html_content = driver.page_source
-        except Exception as e:
-            st.error(body='Selenium Exception occured!', icon='🔥')
-            st.error(body=str(e), icon='🔥')
-        finally:
-            performance_log = driver.get_log('performance')
-            browser_log = driver.get_log('browser')
-    return name, performance_log, browser_log, html_content
+with bidfta_tab:
+    submitted, url, start_page, end_page = create_direct_scraper_ui("BidFTA", "https://www.bidfta.com/browse-all-categories")
+    if submitted: run_scraper("BidFTA", url, start_page, end_page, requires_ai=False)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_bidfta")
+    display_results("BidFTA")
 
+with macbid_tab:
+    submitted, url, start_page, end_page = create_direct_scraper_ui("MAC.bid", "https://www.mac.bid/past-auctions/44592")
+    if submitted: run_scraper("MAC.bid", url, start_page, end_page, requires_ai=False)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_macbid")
+    display_results("MAC.bid")
 
-if __name__ == "__main__":
-    if "proxy" not in st.session_state:
-        st.session_state.proxy = None
-    if "proxies" not in st.session_state:
-        st.session_state.proxies = None
-    if "socks5" not in st.session_state:
-        st.session_state.socks5 = False
-    if "df" not in st.session_state:
-        st.session_state.df = None
-    if "countries" not in st.session_state:
-        st.session_state.countries = None
-    logpath=get_logpath()
-    delete_selenium_log(logpath=logpath)
-    st.set_page_config(page_title="Selenium Test", page_icon='🕸️', layout="wide",
-                        initial_sidebar_state='collapsed')
-    left, middle, right = st.columns([2, 11, 1], gap="small")
-    with middle:
-        st.title('Selenium on Streamlit Cloud 🕸️')
-        st.markdown('''This app is only a very simple test for **Selenium** running on **Streamlit Cloud** runtime.
-            The suggestion for this demo app came from a post on the Streamlit Community Forum.<br>
-            <https://discuss.streamlit.io/t/issue-with-selenium-on-a-streamlit-app/11563><br><br>
-            This is just a very very simple example and more a proof of concept.
-            A link is called and waited for the existence of a specific class to read a specific property.
-            If there is no error message, the action was successful. Afterwards the log files are displayed.
-            Since the target website has geoip blocking enabled, a proxy is required to bypass this and can be selected optionally.
-            However, the use of proxies is not guaranteed to work, as they may not working properly.
-            If you disable the proxy, the app will usually fail on streamlit cloud to load the page.
-            ''', unsafe_allow_html=True)
-        st.markdown('---')
-        middle_left, middle_right = st.columns([9, 10], gap="medium")
-        with middle_left:
-            st.header('Proxy')
-            st.session_state.useproxy = st.toggle(label='Enable proxy to bypass geoip blocking', value=True, disabled=False)
-            if st.session_state.useproxy:
-                socks5 = st.toggle(label='Use Socks5 proxy', value=True, disabled=False)
-                if socks5 != st.session_state.socks5:
-                    st.session_state.socks5 = socks5
-                    st.session_state.proxy = None
-                    st.session_state.proxies = None
-                    st.session_state.df = None
-                if st.session_state.socks5:
-                    # try to gather and use socks5 proxies
-                    if st.button(label='Refresh proxies from free Socks5 list'):
-                        success, proxies = get_mtproto_socks5()
-                        if not success:
-                            st.error(f"No socks5 proxies found", icon='🔥')
-                            st.error(proxies, icon='🔥')
-                            st.session_state.df = None
-                        else:
-                            if not proxies.empty:
-                                countries = sorted(proxies['country'].unique().tolist())
-                                st.session_state.df = proxies.copy()
-                                st.session_state.countries = countries
-                            else:
-                                st.session_state.df = None
-                                st.session_state.countries = None
-                else:
-                    # try to gather and use socks4 proxies
-                    if st.button(label='Refresh proxies from free Socks4 list'):
-                        success, proxies = get_proxyscrape_socks4(country='all', protocol='socks4')
-                        if not success:
-                            st.error(f"No socks4 proxies found", icon='🔥')
-                            st.error(proxies, icon='🔥')
-                            st.session_state.df = None
-                        else:
-                            if not proxies.empty:
-                                countries = sorted(proxies['ip_data.countryCode'].unique().tolist())
-                                st.session_state.df = proxies.copy()
-                                st.session_state.countries = countries
-                            else:
-                                st.session_state.df = None
-                                st.session_state.countries = None
-                if st.session_state.countries is not None:
-                    # limit countries to a set of countries
-                    allowed_countries = ['FR', 'GB', 'DE', 'ES', 'CH', 'US']
-                    st.session_state.countries = [country for country in st.session_state.countries if country in allowed_countries]
-                if st.session_state.df is not None and st.session_state.countries is not None:
-                    selected_country = st.selectbox(label='Select a country', options=st.session_state.countries)
-                    selected_country_flag = get_flag(selected_country)
-                    st.info(f'Selected Country: {selected_country} {selected_country_flag}', icon='🌍')
-                    if st.session_state.socks5:
-                        selected_country_proxies = st.session_state.df[st.session_state.df['country'] == selected_country]
-                    else:
-                        selected_country_proxies = st.session_state.df[st.session_state.df['ip_data.countryCode'] == selected_country]
-                    st.session_state.proxies = set(selected_country_proxies[['ip', 'port']].apply(lambda x: f"{x.iloc[0]}:{x.iloc[1]}", axis=1).tolist())
-                    if st.session_state.proxies:
-                        st.session_state.proxy = st.selectbox(label='Select a proxy from the list', options=st.session_state.proxies, index=0)
-                        st.info(body=f'{st.session_state.proxy} {get_flag(selected_country)}', icon='😎')
-            else:
-                st.session_state.proxy = None
-                st.session_state.proxies = None
-                st.session_state.df = None
-                st.info('Proxy is disabled', icon='🔒')
-        with middle_right:
-            st.header('Versions')
-            st.text('This is only for debugging purposes.\n'
-                    'Checking versions installed in environment:\n\n'
-                    f'- Python:        {get_python_version()}\n'
-                    f'- Streamlit:     {st.__version__}\n'
-                    f'- Selenium:      {webdriver.__version__}\n'
-                    f'- Chromedriver:  {get_chromedriver_version()}\n'
-                    f'- Chromium:      {get_chromium_version()}')
-        st.markdown('---')
+with astock_tab:
+    submitted, url, start_page, end_page = create_direct_scraper_ui("A-Stock", "https://a-stock.bid")
+    if submitted: run_scraper("A-Stock", url, start_page, end_page, requires_ai=False)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_astock")
+    display_results("A-Stock")
 
-        if st.button('Start Selenium run'):
-            st.info(f'Selected Proxy: {st.session_state.proxy}', icon='☢️')
-            if st.session_state.useproxy:
-                socksStr = 'socks5' if st.session_state.socks5 else 'socks4'
-                st.info(f'Selected Socks: {socksStr}', icon='🧦')
-            else:
-                socksStr = None
-            with st.spinner('Selenium is running, please wait...'):
-                result, performance_log, browser_log, html_content = run_selenium(logpath=logpath, proxy=st.session_state.proxy, socksStr=socksStr)
-                if result is None:
-                    st.error('There was an error, no result found!', icon='🔥')
-                else:
-                    st.success(body=f'Result: {result}', icon='🎉')
-                st.info('Selenium log files are shown below...', icon='⬇️')
-                performance_log_msg = get_messages_from_log(performance_log)
-                if performance_log_msg is not None:
-                    st.header('Performance Log (filtered) - only non 200/204 status codes')
-                    st.code(body=json.dumps(performance_log_msg, indent=4), language='json', line_numbers=True)
-                st.header('Selenium Log')
-                show_selenium_log(logpath=logpath)
-                if result is None and html_content is not None:
-                    st.header('HTML Content')
-                    st.code(body=prettify_html(html_content), language='html', line_numbers=True)
-                st.balloons()
+with auctions702_tab:
+    submitted, url, start_page, end_page = create_direct_scraper_ui("702Auctions", "https://bid.702auctions.com", special_note="Pages start from 0 internally. Use 'Start Page' input.")
+    if submitted: run_scraper("702Auctions", url, start_page, end_page, requires_ai=False)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_702")
+    display_results("702Auctions")
+
+with vista_tab:
+    submitted, url, start_page, end_page = create_direct_scraper_ui("Vista", "https://vistaauction.com", special_note="Pages start from 0 internally. Use 'Start Page' input.")
+    if submitted: run_scraper("Vista", url, start_page, end_page, requires_ai=False)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_vista")
+    display_results("Vista")
+
+with bidsoflo_tab:
+    submitted, url, start_page, end_page = create_direct_scraper_ui("BidSoflo", "https://bid.bidsoflo.us/Public/Auction/AuctionItems?AuctionId=...")
+    if submitted: run_scraper("BidSoflo", url, start_page, end_page, requires_ai=False)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_bidsoflo")
+    display_results("BidSoflo")
+
+with bidauctiondepot_tab:
+    submitted, url, start_page, end_page = create_direct_scraper_ui("BidAuctionDepot", "https://bidauctiondepot.com/search/product-buyer-auction/...")
+    if submitted: run_scraper("BidAuctionDepot", url, start_page, end_page, requires_ai=False)
+    if st.session_state.is_scraping: st.button("🛑 Stop Scraping", on_click=stop_scraping, use_container_width=True, key="stop_depot")
+    display_results("BidAuctionDepot")
