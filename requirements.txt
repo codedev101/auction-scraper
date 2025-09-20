@@ -1,5 +1,8 @@
-streamlit
 pydoll-python
+streamlit
 beautifulsoup4
 pandas
-
+requests
+google-generativeai
+asyncio
+google-genai
