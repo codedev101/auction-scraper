@@ -1,5 +1,5 @@
 streamlit
-seleniumbase==4.15.10
+seleniumbase
 webdriver-manager
 requests
 beautifulsoup4
@@ -12,6 +12,7 @@ openpyxl
 lxml
 html5lib
 cryptography
+
 
 
 
