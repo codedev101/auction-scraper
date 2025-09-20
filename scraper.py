@@ -43,7 +43,6 @@ class AuctionScraper:
         if self.gemini_api_keys:
             self.setup_gemini()
 
-       import tempfile
         temp_dir = tempfile.mkdtemp()
         os.environ['TMPDIR'] = temp_dir
         os.environ['SELENIUM_DRIVER_PATH'] = temp_dir
@@ -1304,6 +1303,7 @@ class AuctionScraper:
             except Exception as e:
                 self.ui['status'].error(f"Error on page {page}: {str(e)}")
                 break
+
 
 
 
