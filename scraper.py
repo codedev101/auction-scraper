@@ -196,7 +196,6 @@ class AuctionScraper:
                 self.driver = Driver(
                     browser="chrome", 
                     headless=True, 
-                    uc=True, 
                     page_load_strategy="eager",
                     
                 )            
@@ -1303,6 +1302,7 @@ class AuctionScraper:
             except Exception as e:
                 self.ui['status'].error(f"Error on page {page}: {str(e)}")
                 break
+
 
 
 
