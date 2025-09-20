@@ -10,6 +10,10 @@ import time
 import sys
 import importlib.util
 
+# Force clear cache and rerun
+st.cache_data.clear()
+st.cache_resource.clear()
+
 # --- Dependency Handling ---
 # Attempt to import the user's custom scraper class. If it fails, define a placeholder.
 try:
@@ -57,7 +61,7 @@ except (ImportError, FileNotFoundError):
     st.warning("`amazon.py` not found. Using placeholder functions for demonstration.")
     def get_logo_base64():
         """Returns a base64 encoded string for a placeholder logo."""
-        return "iVBORw0KGgoAAAANSUhEUgAAAQoAAAApCAYAAAD77MRbAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAHPSURBVHhe7dJBDQAgDAAxAbTj/ycqaKEtKEvcdDkHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADcsPTZfH/eAwbBGAwAYDAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgCAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAgMEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGBbfgAByAB2q0Bv/AAAAABJRU5ErkJggg=="
+        return "iVBORw0KGgoAAAANSUhEUgAAAQoAAAApCAYAAAD77MRbAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAHPSURBVHhe7dJBDQAgDAAxAbTj/ycqaKEtKEvcdDkHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADcsPTZfH/eAwbBGAwAYDAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgCAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAACAwQAAAAwGAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAAAYDAAAMBgAAgMEAgMEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGBbfgAByAB2q0Bv/AAAAABJRU5ErkJggg=="
 
     def render_upload_tab():
         st.info("This is the placeholder for the CSV upload functionality.")
@@ -100,7 +104,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- NEW & IMPROVED PROFESSIONAL CSS STYLING ---
+# Force sidebar to be expanded
+if 'sidebar_state' not in st.session_state:
+    st.session_state.sidebar_state = 'expanded'
+
+# --- SIDEBAR RECOVERY CSS & EMERGENCY FIXES ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -132,12 +140,44 @@ st.markdown("""
     
     /* FIXED: Only hide specific menu items, not the sidebar toggle button */
     #MainMenu { visibility: hidden; }
-    header[data-testid="stHeader"] { visibility: hidden; }
     footer { visibility: hidden; }
     .stDeployButton { visibility: hidden; }
     
-    /* FIXED: Ensure sidebar toggle button is visible */
+    /* FIXED: Ensure sidebar toggle button is visible - Multiple selectors for different Streamlit versions */
     button[kind="header"] { visibility: visible !important; }
+    button[data-testid="collapsedControl"] { visibility: visible !important; }
+    .css-1dp5vir { visibility: visible !important; }
+    .css-16huue1 { visibility: visible !important; }
+    header[data-testid="stHeader"] button { visibility: visible !important; }
+    
+    /* Force sidebar toggle to appear */
+    .stApp > header, .stApp header[data-testid="stHeader"] {
+        visibility: visible !important;
+        display: block !important;
+    }
+    
+    /* Emergency floating sidebar toggle */
+    .floating-toggle {
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 9999 !important;
+        background: #FE4A49 !important;
+        color: white !important;
+        border: none !important;
+        padding: 8px 12px !important;
+        border-radius: 6px !important;
+        cursor: pointer !important;
+        font-weight: bold !important;
+        font-size: 16px !important;
+    }
+    
+    /* Emergency sidebar visibility */
+    section[data-testid="stSidebar"] {
+        position: relative !important;
+        display: block !important;
+        visibility: visible !important;
+    }
     
     section[data-testid="stSidebar"] {
         background-color: var(--sidebar-bg) !important;
@@ -150,7 +190,7 @@ st.markdown("""
         border: 1px solid var(--sidebar-border);
     }
     .section-header {
-        font-size: 0.75rem; font-weight: 600; color: #CCCCCC !important; /* FIXED: Made text lighter for visibility */
+        font-size: 0.75rem; font-weight: 600; color: #CCCCCC !important;
         text-transform: uppercase; letter-spacing: 0.1em; margin: 1.5rem 0 0.5rem 0;
         padding-left: 0.5rem;
     }
@@ -183,18 +223,18 @@ st.markdown("""
     .stTextInput > div > div > input,
     .stNumberInput > div > div > input {
         border-radius: 10px !important; 
-        border: 2px solid #E0E0E0 !important; /* FIXED: Better border visibility */
+        border: 2px solid #E0E0E0 !important;
         padding: 0.75rem 1rem !important; 
         font-family: var(--font-family) !important;
-        background: #FFFFFF !important; /* FIXED: White background for login inputs */
-        color: #212529 !important; /* FIXED: Dark text for better readability */
+        background: #FFFFFF !important;
+        color: #212529 !important;
         font-weight: 500 !important;
         transition: all 0.2s ease !important;
     }
     
     /* FIXED: White placeholder text for password input */
     .stTextInput > div > div > input::placeholder {
-        color: #888888 !important; /* FIXED: Visible placeholder color */
+        color: #888888 !important;
         opacity: 1 !important;
     }
     
@@ -257,7 +297,7 @@ st.markdown("""
     }
     div[data-testid="stAlert"] p { 
         color: #333 !important; 
-        font-weight: 500 !important; /* FIXED: Better text weight */
+        font-weight: 500 !important;
     }
     div[data-testid="stAlert"][kind="info"] {
         background-color: var(--info-bg); border-color: var(--info-border);
@@ -314,6 +354,42 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Emergency CSS fix and floating toggle button
+st.markdown("""
+<style>
+.stApp > header { display: block !important; visibility: visible !important; }
+section[data-testid="stSidebar"] { display: block !important; }
+</style>
+
+<div style="position: fixed; top: 10px; right: 10px; background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; z-index: 999;">
+    Press <strong>[</strong> key to toggle sidebar
+</div>
+
+<button class="floating-toggle" onclick="
+    const sidebar = document.querySelector('[data-testid=\\'stSidebar\\']');
+    if (sidebar) {
+        sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+    }
+">☰</button>
+
+<script>
+// Check if sidebar is visible
+function checkSidebar() {
+    const sidebar = document.querySelector('[data-testid=\"stSidebar\"]');
+    if (!sidebar || sidebar.style.display === 'none' || sidebar.offsetWidth === 0) {
+        const recoveryDiv = document.getElementById('sidebar-recovery');
+        if (recoveryDiv) {
+            recoveryDiv.style.display = 'block';
+        }
+    }
+}
+setTimeout(checkSidebar, 1000);
+</script>
+
+<div id="sidebar-recovery" style="display: none; position: fixed; top: 50px; left: 10px; background: #FE4A49; color: white; padding: 12px; border-radius: 8px; z-index: 1000; font-weight: bold;">
+    Sidebar hidden? Press <strong>[</strong> key or refresh page (F5)
+</div>
+""", unsafe_allow_html=True)
 
 # Session State Management
 if 'authenticated' not in st.session_state:
@@ -326,6 +402,8 @@ if 'results_df' not in st.session_state:
     st.session_state.results_df = pd.DataFrame()
 if 'scraper_instance' not in st.session_state:
     st.session_state.scraper_instance = None
+if 'sidebar_visible' not in st.session_state:
+    st.session_state.sidebar_visible = True
 
 # Amazon session states
 if 'fullscreen_mode' not in st.session_state:
@@ -555,6 +633,50 @@ def show_amazon_environment():
 if not st.session_state.authenticated:
     show_login_page()
 else:
+    # === SIDEBAR RECOVERY SOLUTIONS ===
+    
+    # Emergency Sidebar Toggle Button (Only show when sidebar might be hidden)
+    col1, col2, col3 = st.columns([1, 8, 1])
+    with col1:
+        if st.button("☰", help="Toggle Sidebar", key="sidebar_toggle"):
+            st.session_state.sidebar_visible = not st.session_state.sidebar_visible
+            st.rerun()
+
+    # Show navigation help for non-home views
+    if st.session_state.current_view != 'home':
+        with st.expander("🔧 Navigation Help", expanded=False):
+            st.markdown("""
+            **If sidebar disappeared:**
+            - Press `[` key (left bracket) to toggle sidebar
+            - Refresh page with `F5` or `Ctrl+R`
+            - Click the ☰ button (if visible)
+            - Use the navigation buttons below as backup
+            """)
+            
+            # Backup navigation buttons
+            st.markdown("**Quick Navigation:**")
+            nav_col1, nav_col2, nav_col3, nav_col4 = st.columns(4)
+            
+            with nav_col1:
+                if st.button("🏠 Home", key="backup_home"):
+                    st.session_state.current_view = 'home'
+                    st.rerun()
+            
+            with nav_col2:
+                if st.button("🤖 AI Scrapers", key="backup_ai"):
+                    st.session_state.current_view = 'hibid'
+                    st.rerun()
+            
+            with nav_col3:
+                if st.button("📊 Direct Scrapers", key="backup_direct"):
+                    st.session_state.current_view = 'nellis'
+                    st.rerun()
+                    
+            with nav_col4:
+                if st.button("📦 Amazon Tool", key="backup_amazon"):
+                    st.session_state.current_view = 'amazon'
+                    st.rerun()
+
     with st.sidebar:
         st.markdown('<div class="sidebar-title">NextGen Business Intelligence</div>', unsafe_allow_html=True)
         if st.button("🏠 Dashboard", key="home_btn", use_container_width=True): st.session_state.current_view = 'home'; st.rerun()
