@@ -8,8 +8,13 @@ from datetime import datetime, timedelta
 import statistics
 import traceback
 import io
-import pandas as pd
+import tempfile  # Add this
 
+import pandas as pd
+temp_dir = tempfile.mkdtemp()
+os.environ['SELENIUMBASE_DRIVER_PATH'] = temp_dir
+os.environ['SELENIUMBASE_DOWNLOADS_PATH'] = temp_dir
+os.environ['WDM_LOCAL'] = temp_dir
 # Google Gemini API imports
 from google import genai
 from google.genai import types
@@ -187,8 +192,16 @@ class AuctionScraper:
             selenium_sites = ["HiBid", "BiddingKings", "BidLlama", "MAC.bid", "Vista", "BidAuctionDepot", "BidSoflo"]
             
             if site in selenium_sites:
-                self.driver = Driver(browser="chrome", headless=True, uc=True, page_load_strategy="eager")
-            
+                self.driver = Driver(
+                    browser="chrome", 
+                    headless=True, 
+                    uc=True, 
+                    page_load_strategy="eager",
+                    no_sandbox=True,
+                    disable_dev_shm_usage=True,
+                    disable_gpu=True,
+                    disable_extensions=True
+                )            
             if site == "HiBid": 
                 self.scrape_hibid(url, start_page, end_page)
             elif site == "BiddingKings": 
