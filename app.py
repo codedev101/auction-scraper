@@ -3,6 +3,7 @@ import asyncio
 from bs4 import BeautifulSoup
 import pandas as pd
 import traceback
+import os
 
 # Page configuration
 st.set_page_config(
@@ -17,6 +18,7 @@ st.write("Testing Pydoll browser automation with BidLlama auction site")
 # Check if Pydoll is available
 try:
     from pydoll.browser import Chrome
+    from pydoll.browser.options import ChromiumOptions
     st.success("✅ Pydoll imported successfully")
 except ImportError as e:
     st.error("❌ Pydoll not installed. Add 'pydoll' to requirements.txt")
@@ -28,30 +30,69 @@ async def scrape_bidllama(url, status_placeholder, progress_bar):
     results = []
     
     try:
-        status_placeholder.info("🚀 Starting browser...")
-        browser = Chrome()
+        status_placeholder.info("Setting up browser options...")
+        
+        # Setup Chrome options for Streamlit Cloud
+        options = ChromiumOptions()
+        
+        # Try different Chrome binary locations
+        chrome_paths = [
+            '/usr/bin/chromium-browser',
+            '/usr/bin/chromium',
+            '/usr/bin/google-chrome',
+            '/usr/bin/google-chrome-stable',
+            '/snap/bin/chromium'
+        ]
+        
+        chrome_path = None
+        for path in chrome_paths:
+            if os.path.exists(path):
+                chrome_path = path
+                break
+        
+        if chrome_path:
+            options.binary_location = chrome_path
+            status_placeholder.info(f"Found Chrome at: {chrome_path}")
+        else:
+            status_placeholder.warning("No Chrome binary found, using default...")
+        
+        # Add arguments for headless operation in containerized environment
+        options.add_argument('--headless=new')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-background-timer-throttling')
+        options.add_argument('--disable-backgrounding-occluded-windows')
+        options.add_argument('--disable-renderer-backgrounding')
+        options.add_argument('--disable-features=TranslateUI')
+        options.add_argument('--disable-ipc-flooding-protection')
+        options.add_argument('--window-size=1920,1080')
+        
+        status_placeholder.info("Starting browser...")
+        browser = Chrome(options=options)
         tab = await browser.start()
         progress_bar.progress(20)
         
-        status_placeholder.info(f"🌐 Navigating to BidLlama...")
+        status_placeholder.info(f"Navigating to BidLlama...")
         await tab.go_to(url)
         progress_bar.progress(40)
         
-        status_placeholder.info("⏳ Waiting for page to load...")
+        status_placeholder.info("Waiting for page to load...")
         await asyncio.sleep(5)
         progress_bar.progress(60)
         
         # Try to wait for specific elements
         try:
             await tab.find(xpath="//p[@class='item-lot-number']", timeout=10)
-            status_placeholder.success("✅ Found item-lot-number elements!")
+            status_placeholder.success("Found item-lot-number elements!")
         except Exception as e:
-            status_placeholder.warning(f"⚠️ Could not find item-lot-number elements: {e}")
+            status_placeholder.warning(f"Could not find item-lot-number elements: {e}")
         
         progress_bar.progress(80)
         
         # Get page content
-        status_placeholder.info("📄 Extracting page content...")
+        status_placeholder.info("Extracting page content...")
         try:
             content = await tab.execute_script("return document.documentElement.outerHTML")
             
@@ -69,17 +110,17 @@ async def scrape_bidllama(url, status_placeholder, progress_bar):
             soup = BeautifulSoup(content, 'html.parser')
             
         except Exception as e:
-            status_placeholder.error(f"❌ Error getting page content: {e}")
+            status_placeholder.error(f"Error getting page content: {e}")
             # Try alternative method
             try:
-                status_placeholder.info("🔄 Trying alternative content extraction...")
+                status_placeholder.info("Trying alternative content extraction...")
                 content = await tab.execute_script("return document.body.innerHTML")
                 if not isinstance(content, str):
                     content = str(content)
                 soup = BeautifulSoup(f"<html><body>{content}</body></html>", 'html.parser')
                 content_info = {"alternative_method": True}
             except Exception as e2:
-                status_placeholder.error(f"❌ Alternative method failed: {e2}")
+                status_placeholder.error(f"Alternative method failed: {e2}")
                 return [], {"error": str(e2)}
         
         progress_bar.progress(90)
@@ -95,29 +136,45 @@ async def scrape_bidllama(url, status_placeholder, progress_bar):
                 "parent": tag.parent.name if tag.parent else "None"
             })
         
+        # If no lot number tags found, show some sample p tags for debugging
+        if not lot_number_tags:
+            all_p_tags = soup.find_all("p")
+            sample_p_tags = []
+            for i, p in enumerate(all_p_tags[:5]):
+                sample_p_tags.append({
+                    "index": i + 1,
+                    "classes": p.get('class', []),
+                    "text": p.text.strip()[:100] + "..." if len(p.text.strip()) > 100 else p.text.strip()
+                })
+            content_info["sample_p_tags"] = sample_p_tags
+        
         # Get page info
         try:
             title = await tab.execute_script("return document.title")
             ready_state = await tab.execute_script("return document.readyState")
+            url_check = await tab.execute_script("return window.location.href")
         except:
             title = "Unknown"
             ready_state = "Unknown"
+            url_check = "Unknown"
         
         page_info = {
             "title": title,
             "ready_state": ready_state,
-            "total_p_tags": len(soup.find_all("p")),
+            "current_url": url_check,
+            "total_p_tags": len(soup.find_all("p")) if soup else 0,
             "lot_number_tags": len(lot_number_tags),
-            "content_info": content_info
+            "content_info": content_info,
+            "chrome_path": chrome_path
         }
         
         progress_bar.progress(100)
-        status_placeholder.success(f"✅ Scraping complete! Found {len(lot_number_tags)} lot number tags")
+        status_placeholder.success(f"Scraping complete! Found {len(lot_number_tags)} lot number tags")
         
         return results, page_info
         
     except Exception as e:
-        status_placeholder.error(f"❌ Scraping failed: {e}")
+        status_placeholder.error(f"Scraping failed: {e}")
         return [], {"error": str(e), "traceback": traceback.format_exc()}
     
     finally:
