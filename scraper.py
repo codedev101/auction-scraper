@@ -198,9 +198,7 @@ class AuctionScraper:
                     uc=True, 
                     page_load_strategy="eager",
                     no_sandbox=True,
-                    disable_dev_shm_usage=True,
-                    disable_gpu=True,
-                    disable_extensions=True
+
                 )            
             if site == "HiBid": 
                 self.scrape_hibid(url, start_page, end_page)
@@ -1305,3 +1303,4 @@ class AuctionScraper:
             except Exception as e:
                 self.ui['status'].error(f"Error on page {page}: {str(e)}")
                 break
+
