@@ -14,12 +14,14 @@ import pandas as pd
 from google import genai
 from google.genai import types
 
-# Undetected ChromeDriver imports
-import undetected_chromedriver as uc
+# Selenium imports with WebDriverManager
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 import base64
 
 class AuctionScraper:
@@ -52,12 +54,26 @@ class AuctionScraper:
                 pass
 
     def setup_driver(self):
-        """Setup undetected ChromeDriver"""
+        """Setup Chrome WebDriver with WebDriverManager"""
         try:
-            options = uc.ChromeOptions()
+            options = Options()
             options.add_argument('--headless=new')
-            self.driver = uc.Chrome(options=options, version_main=None)
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--disable-extensions')
+            options.add_argument('--disable-web-security')
+            options.add_argument('--allow-running-insecure-content')
+            options.add_argument('--disable-features=VizDisplayCompositor')
+            options.add_argument('--window-size=1920,1080')
+            options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            
+            # Use WebDriverManager to handle version matching
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=options)
+            
+            # Test the driver
+            self.driver.get("data:text/html,<html><body><h1>Test</h1></body></html>")
             
         except Exception as e:
             self.ui['status'].error(f"Failed to setup ChromeDriver: {e}")
@@ -200,7 +216,7 @@ class AuctionScraper:
 
     def run(self, site, url, start_page, end_page):
         try:
-            # Sites that need undetected chromedriver
+            # Sites that need Chrome WebDriver
             selenium_sites = ["HiBid", "BiddingKings", "BidLlama", "MAC.bid", "Vista", "BidAuctionDepot", "BidSoflo"]
             
             if site in selenium_sites:
@@ -707,7 +723,7 @@ class AuctionScraper:
                 processed += 1
 
     def scrape_macbid(self, url, start_page, end_page):
-        """Scrape MAC.bid - uses undetected chromedriver (no AI needed, has retail prices)"""
+        """Scrape MAC.bid - uses Chrome WebDriver (no AI needed, has retail prices)"""
         try:
             self.ui['status'].info("Starting MAC.bid scraper with browser...")
             
@@ -975,7 +991,7 @@ class AuctionScraper:
                 break
 
     def scrape_vista(self, url, start_page, end_page):
-        """Scrape Vista Auction - uses undetected chromedriver with Cloudflare bypass"""
+        """Scrape Vista Auction - uses Chrome WebDriver with Cloudflare handling"""
         base_url = url.split("?")[0]
         vista_base_url = "https://vistaauction.com"
         page = start_page - 1 if start_page > 0 else 0
@@ -987,22 +1003,18 @@ class AuctionScraper:
                 self.ui['status'].info(f"Fetching Vista Auction page {page}...")
                 
                 if page == (start_page - 1) or not cloudflare_bypassed:
-                    self.ui['status'].info("Attempting to solve Cloudflare challenge...")
-                    try:
-                        self.driver.get(current_url)
-                        time.sleep(10)  # Give time for Cloudflare challenge
-                        
-                        # Check if we're past Cloudflare
-                        if "Checking your browser" not in self.driver.page_source:
-                            self.ui['status'].success("Cloudflare challenge likely solved!")
-                            cloudflare_bypassed = True
-                        else:
-                            self.ui['status'].info("Still solving Cloudflare challenge...")
-                            time.sleep(15)
-                            cloudflare_bypassed = True
-                    except Exception as e:
-                        self.ui['status'].error(f"Error with initial page load: {str(e)}")
-                        time.sleep(10)
+                    self.ui['status'].info("Loading page and waiting for Cloudflare...")
+                    self.driver.get(current_url)
+                    time.sleep(10)  # Give time for Cloudflare challenge
+                    
+                    # Check if we're past Cloudflare
+                    if "Checking your browser" not in self.driver.page_source:
+                        self.ui['status'].success("Page loaded successfully!")
+                        cloudflare_bypassed = True
+                    else:
+                        self.ui['status'].info("Still handling Cloudflare challenge...")
+                        time.sleep(15)
+                        cloudflare_bypassed = True
                 else:
                     self.driver.get(current_url)
                 
@@ -1085,7 +1097,7 @@ class AuctionScraper:
                 break
 
     def scrape_bidsoflo(self, url, start_page, end_page):
-        """Scrape BidSoflo - uses undetected chromedriver (no AI needed, has retail prices)"""
+        """Scrape BidSoflo - uses Chrome WebDriver (no AI needed, has retail prices)"""
         base_url = "https://bid.bidsoflo.us"
         current_url = url
         page = start_page
@@ -1192,7 +1204,7 @@ class AuctionScraper:
                 break
 
     def scrape_bidauctiondepot(self, url, start_page, end_page):
-        """Scrape BidAuctionDepot - uses undetected chromedriver (no AI needed, has retail prices)"""
+        """Scrape BidAuctionDepot - uses Chrome WebDriver (no AI needed, has retail prices)"""
         base_url = "https://bidauctiondepot.com/productView/"
         page = start_page
         lot_id = ""
