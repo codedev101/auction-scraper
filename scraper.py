@@ -21,6 +21,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import base64
+os.environ['CHROMEDRIVER_PATH'] = ChromeDriverManager().install()
 
 class AuctionScraper:
     def __init__(self, gemini_api_keys, ui_placeholders):
@@ -193,7 +194,7 @@ class AuctionScraper:
                     headless=True, 
                     uc=True, 
                     page_load_strategy="eager",
-                    driver_executable_path=ChromeDriverManager().install()
+                    
                 )            
             if site == "HiBid": 
                 self.scrape_hibid(url, start_page, end_page)
@@ -1298,3 +1299,4 @@ class AuctionScraper:
             except Exception as e:
                 self.ui['status'].error(f"Error on page {page}: {str(e)}")
                 break
+
