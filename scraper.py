@@ -21,7 +21,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import base64
-os.environ['CHROMEDRIVER_PATH'] = ChromeDriverManager().install()
 
 class AuctionScraper:
     def __init__(self, gemini_api_keys, ui_placeholders):
@@ -1299,4 +1298,5 @@ class AuctionScraper:
             except Exception as e:
                 self.ui['status'].error(f"Error on page {page}: {str(e)}")
                 break
+
 
